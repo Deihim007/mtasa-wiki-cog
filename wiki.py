@@ -190,7 +190,7 @@ class Wiki(commands.Cog):
             embed.set_author(name=name, url=title_url)
             embed.set_footer(text="@"+ctx.author.name+"#"+ctx.author.discriminator, icon_url=ctx.author.avatar_url)
 
-            if part and result[part]:
+            if part in ["description", "syntax", "example", "source", "parameters", "returns", "oArgs", "rArgs", "changelog", "seealso", "oop", "cancel"]:
                 part_name = part[0].upper() + part[1:]
                 embed.add_field(name=part_name, value=result[part], inline=False)
             else:

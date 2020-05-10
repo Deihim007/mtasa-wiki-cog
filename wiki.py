@@ -1,6 +1,7 @@
 import discord
 from redbot.core import commands, checks, data_manager
 from redbot.core.config import Config
+from redbot.core.utils import mod
 
 import requests
 from bs4 import BeautifulSoup
@@ -22,6 +23,9 @@ class Wiki(commands.Cog):
 
         with open(data_manager.bundled_data_path(self) / "list.json", "r") as f:
             self.list = json.load(f)
+
+        with open(data_manager.bundled_data_path(self) / "channels.json", "r") as f:
+            self.channels = json.load(f)
 
         self.junk = [
             "[[{{{image}}}|link=]]"
@@ -208,8 +212,27 @@ class Wiki(commands.Cog):
         return list(set(lst1) & set(lst2))
 
     @commands.command()
-    async def wiki(self, ctx, target, part):
-        await self.fetch(ctx, target, part)
+    async def wiki(self, ctx, target, part=None):
+        if target == "allow":
+            if not await mod.check_permissions(ctx, ['manage_messages']):
+                return
+            if ctx.channel.id in self.channels:
+                return await ctx.channel.send("Wiki is already allowed in this channel.")
+            self.channels.append(ctx.channel.id)
+            with open(data_manager.bundled_data_path(self) / "channels.json", 'w') as f:
+                json.dump(self.channels, f)
+            await ctx.channel.send("Wiki is now allowed in this channel.")
+        elif target == "deny":
+            if not await mod.check_permissions(ctx, ['manage_messages']):
+                return
+            if ctx.channel.id not in self.channels:
+                return await ctx.channel.send("Wiki is not allowed in here already.")
+            self.channels.remove(ctx.channel.id)
+            with open(data_manager.bundled_data_path(self) / "channels.json", 'w') as f:
+                json.dump(self.channels, f)
+            await ctx.channel.send("Wiki is no longer available in this channel.")
+        elif ctx.channel.id in self.channels:
+            await self.fetch(ctx, target, part)
 
     @commands.Cog.listener()
     async def on_message_without_command(self, ctx):
@@ -217,6 +240,8 @@ class Wiki(commands.Cog):
             return
         guild = ctx.guild
         if guild is None:
+            return
+        if ctx.channel.id not in self.channels:
             return
 
         ticks = re.findall(r'\`(.*?)\`', ctx.content)
